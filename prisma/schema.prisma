@@ -1,0 +1,85 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id    Int     @id @default(autoincrement())
+  email String  @unique
+  name  String?
+  password String
+  role String
+  image String?
+  imageId String?
+  guest Guest[]
+}
+
+model Room {
+  id Int @id @default(autoincrement())
+  name String
+  maxCapacity Int
+  description String?
+  roomtypeId Int
+  availability Boolean @default(true)
+  price Float
+  floor Int
+  roomNumber String
+
+  booking Booking[]
+  roomtype RoomType @relation(fields: [roomtypeId], references: [id])
+}
+
+model Guest {
+  id String @id
+  name String
+  address String
+  email String
+  dateOfBirth DateTime
+  userId Int
+
+  user User @relation(fields: [userId], references: [id])
+  booking Booking[]
+}
+
+model Booking {
+  id String @id
+  guestId String
+  checkInDate DateTime?
+  checkOutDate DateTime?
+  bookingDate DateTime
+  status String?
+  totalGuest Int @default(1)
+  roomId Int
+  
+  room Room @relation(fields: [roomId], references: [id])
+  guest Guest @relation(fields: [guestId], references: [id])
+  payment Payment?
+}
+
+model Payment {
+  id String @id
+  bookingId String @unique
+  total Float
+  paymentDate DateTime
+  paymentMethod String
+  status String
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+}
+
+model RoomType {
+  id Int @id @default(autoincrement())
+  name String
+
+  rooms Room[]  
+}

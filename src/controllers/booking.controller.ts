@@ -1,0 +1,265 @@
+import { Request, Response } from "express";
+import z from "zod";
+import { prisma } from "../lib/prisma";
+
+const creatBookingSchema = z.object({
+  id: z.string(),
+  guestId: z.coerce.number().int(),
+  roomId: z.coerce.number().int(),
+  checkInDate: z.string(),
+  checkOutDate: z.string(),
+  bookingDate: z.string(),
+  totalGuest: z.coerce.number().int(),
+  status: z.string().optional(),
+});
+export const createBooking = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const parseBody = creatBookingSchema.safeParse(req.body);
+    if (!parseBody.success) {
+      console.log(parseBody.error);
+      res.status(400).json({
+        success: false,
+        message: "Invalid request body",
+        data: null,
+      });
+      return;
+    }
+    const {
+      id,
+      guestId,
+      roomId,
+      checkInDate,
+      checkOutDate,
+      bookingDate,
+      totalGuest,
+      status,
+    } = parseBody.data;
+    const booking = await prisma.booking.create({
+      data: {
+        id: id,
+        guestId: guestId.toString(),
+        roomId: roomId,
+        checkInDate: new Date(checkInDate),
+        checkOutDate: new Date(checkOutDate),
+        bookingDate: new Date(bookingDate),
+        totalGuest: totalGuest,
+        status: status,
+      },
+    });
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.log("Error while creating booking ~creatingBooking : ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while creating booking",
+      data: null,
+    });
+  }
+};
+
+//TODO: tambahkan search dan pagination
+export const getBooking = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const bookings = await prisma.booking.findMany({
+      include: {
+        guest: true,
+        room: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Bookings fetched successfully",
+      data: bookings,
+    });
+  } catch (error) {
+    console.log("Error while getting booking ~ getBooking: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting booking",
+      data: null,
+    });
+  }
+};
+
+export const getBookingById = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const booking = await prisma.booking.findUnique({
+      where: {
+        id: id.toString(),
+      },
+      include: {
+        guest: true,
+        room: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Booking fetched successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.log("Error while getting booking ~ getBooking: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting booking",
+      data: null,
+    });
+  }
+};
+
+export const updateBooking = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const parseBody = creatBookingSchema.partial().safeParse(req.body);
+    if (!parseBody.success) {
+      console.log(parseBody.error);
+      res.status(400).json({
+        success: false,
+        message: "Invalid request body",
+        data: null,
+      });
+      return;
+    }
+    const { id } = req.params;
+    const {
+      guestId,
+      roomId,
+      checkInDate,
+      checkOutDate,
+      bookingDate,
+      totalGuest,
+      status,
+    } = parseBody.data;
+    const parseCheckIn = checkInDate ? new Date(checkInDate) : undefined;
+    const parseCheckOut = checkOutDate ? new Date(checkOutDate) : undefined;
+    const parseBookingDate = bookingDate ? new Date(bookingDate) : undefined;
+    const parseGuest = guestId ? guestId.toString() : undefined;
+    const booking = await prisma.booking.update({
+      where: {
+        id: id.toString(),
+      },
+      data: {
+        guestId: parseGuest,
+        roomId: roomId,
+        checkInDate: parseCheckIn,
+        checkOutDate: parseCheckOut,
+        bookingDate: parseBookingDate,
+        totalGuest: totalGuest,
+        status: status,
+      },
+    });
+    res.status(200).json({
+      success: true,
+      message: "Booking updated successfully",
+      data: booking,
+    });
+  } catch (error) {
+    console.log("Error while updating booking ~ updateBooking: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while updating booking",
+      data: null,
+    });
+  }
+};
+
+//untuk updaet checkin dan checkout
+export const updateCiCo = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const parseBody = creatBookingSchema
+      .pick({ status: true })
+      .safeParse(req.body);
+    if (!parseBody.success) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid request body",
+        data: null,
+      });
+      return;
+    }
+    const { status } = parseBody.data;
+    //cari booking
+    const findBooking = await prisma.booking.findUnique({
+      where: {
+        id: id.toString(),
+      },
+    });
+
+    if (!findBooking) {
+      res.status(404).json({
+        success: false,
+        message: "Booking not found",
+        data: null,
+      });
+      return;
+    }
+
+    //pengecekan untuk update status kamar dan status bookingan
+    let stat;
+    let available = true;
+    if (status == "CheckIn" && findBooking?.status == "Waiting") {
+      stat = "CheckIn";
+      available = false;
+    } else if (status == "CheckOut" && findBooking?.status == "CheckIn") {
+      stat = "CheckOut";
+    }
+
+    //update status booking
+    const updateBooking = await prisma.booking.update({
+      where: {
+        id: id.toString(),
+      },
+      data: {
+        status: stat,
+      },
+    });
+
+    //update status ketersediaan kamar
+    await prisma.room.update({
+      where: {
+        id: findBooking.roomId,
+      },
+      data: {
+        availability: available,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Booking updated successfully : ${stat}`,
+      data: updateBooking,
+    });
+  } catch (error) {
+    console.log(
+      `Error while updating ${req.body.status} ~updateCiCo : `,
+      error,
+    );
+    res.status(500).json({
+      success: false,
+      message: "Error while updating checkin and checkout",
+      data: null,
+    });
+  }
+};
