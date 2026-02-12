@@ -9,7 +9,7 @@ import { authentication } from "../middleware/authentication.middleware";
 
 const router = Router();
 
-router.get("/", authentication, getGuest);
+router.get("/", getGuest);
 router.get("/:id", authentication, getGuestById);
 router.post("/", authentication, createGuest);
 router.put("/:id", authentication, updateGuest);

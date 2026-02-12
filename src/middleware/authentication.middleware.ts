@@ -13,7 +13,7 @@ export const authentication = (
   try {
     const token = req.header("Authorization")?.replace("Bearer ", "");
     if (!token) {
-      res.status(401).json({ message: "Unauthorized" });
+      res.status(401).json({ message: "Unauthorized no token" });
       return;
     }
     const JWT_SECRET = process.env.JWT_SECRET;
@@ -22,6 +22,7 @@ export const authentication = (
     }
     const decoded = jwt.verify(token, JWT_SECRET);
     if (!decoded) {
+      console.log(token)
       res.status(401).json({ message: "Unauthorized" });
       return;
     }

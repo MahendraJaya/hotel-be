@@ -9,7 +9,7 @@ const createGuestSchema = z.object({
   name: z.string(),
   email: z.string(),
   dateOfBirth: z.string(),
-  userId: z.coerce.number().int(),
+  // userId: z.coerce.number().int(),
 });
 
 export const createGuest = async (
@@ -27,7 +27,7 @@ export const createGuest = async (
       console.log(parseBody.error);
       return;
     }
-    const { id, address, name, email, dateOfBirth, userId } = parseBody.data;
+    const { id, address, name, email, dateOfBirth } = parseBody.data;
     const guest = await prisma.guest.create({
       data: {
         id: id.toString(),
@@ -35,7 +35,7 @@ export const createGuest = async (
         name: name,
         email: email,
         dateOfBirth: new Date(dateOfBirth),
-        userId: userId,
+        userId: 1,
       },
     });
 
@@ -167,7 +167,7 @@ export const getGuestById = async (
   }
 };
 
-const updateGuestSchema = createGuestSchema.omit({ userId: true });
+const updateGuestSchema = createGuestSchema;
 export const updateGuest = async (
   req: Request,
   res: Response,
