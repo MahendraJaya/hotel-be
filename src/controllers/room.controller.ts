@@ -142,6 +142,9 @@ export const getRoom = async (req: Request, res: Response): Promise<void> => {
         where,
         skip,
         take: pageLimit,
+        include: {
+          roomtype: true,
+        }
       }),
       prisma.room.count({
         where,

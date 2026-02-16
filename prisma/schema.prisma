@@ -51,8 +51,9 @@ model Guest {
   booking Booking[]
 }
 
+// Cancel - Pending - Waiting - CheckIn - CheckOut
 model Booking {
-  id String @id
+  id String @id 
   guestId String
   checkInDate DateTime?
   checkOutDate DateTime?

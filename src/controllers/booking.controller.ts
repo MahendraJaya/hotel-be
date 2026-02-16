@@ -123,6 +123,33 @@ export const getBookingById = async (
   }
 };
 
+export const getCheckin = async (req: Request, res: Response) => {
+  try {
+    const checkin = await prisma.booking.findMany({
+      where: {
+        status: "waiting",
+      },
+      include: {
+        guest: true,
+        room: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Checkin fetched successfully",
+      data: checkin,
+    });
+  } catch (error) {
+    console.log("Error while getting checkin ~ getCheckin: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting checkin",
+      data: null,
+    });
+  }
+};
+
 export const updateBooking = async (
   req: Request,
   res: Response,
@@ -188,8 +215,9 @@ export const updateCiCo = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const parseBody = creatBookingSchema
-      .pick({ status: true })
+    const parseBody = z.object({
+      status: z.string(),
+    })
       .safeParse(req.body);
     if (!parseBody.success) {
       res.status(400).json({
@@ -217,13 +245,15 @@ export const updateCiCo = async (
     }
 
     //pengecekan untuk update status kamar dan status bookingan
-    let stat;
+    let stat = "";
     let available = true;
-    if (status == "CheckIn" && findBooking?.status == "Waiting") {
-      stat = "CheckIn";
+    if (status == "checkin" && findBooking?.status == "waiting") {
+      stat = "checkin";
       available = false;
-    } else if (status == "CheckOut" && findBooking?.status == "CheckIn") {
-      stat = "CheckOut";
+    } else if (status == "checkout" && findBooking?.status == "checkin") {
+      stat = "checkout";
+    } else if (status == "cancel") {
+      stat = "cancel";
     }
 
     //update status booking
@@ -248,7 +278,7 @@ export const updateCiCo = async (
 
     res.status(200).json({
       success: true,
-      message: `Booking updated successfully : ${stat}`,
+      message: `Booking updated successfully : ${status}`,
       data: updateBooking,
     });
   } catch (error) {
