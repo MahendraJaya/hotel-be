@@ -120,23 +120,54 @@ export const getRoom = async (req: Request, res: Response): Promise<void> => {
           AND: [
             {
               checkInDate: {
-                gt: new Date(enddate as string),
+                lt: new Date(enddate as string),
               },
             },
             {
               checkOutDate: {
-                lt: new Date(startdate as string),
+                gt: new Date(startdate as string),
               },
             },
           ],
         },
       };
     } else {
-      where.availability = {
-        equals: true,
+      where.booking = {
+        none: {
+          AND: [
+            {
+              checkInDate: {
+                lt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+              },
+            },
+            {
+              checkOutDate: {
+                gt: new Date(Date.now()) ,
+              },
+            },
+          ],
+        },
       };
     }
-
+    const isi = await prisma.booking.findMany({
+      where: {
+        NOT : {
+          AND: [
+            {
+              checkInDate: {
+                lt: new Date("2028-02-19"),
+              },
+            },
+            {
+              checkOutDate: {
+                gt: new Date("2028-02-18") ,
+              },
+            },
+          ],
+        }
+      }
+      });
+      console.log(`${startdate} || ${enddate}`)
     const [rooms, total] = await Promise.all([
       prisma.room.findMany({
         where,

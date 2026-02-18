@@ -1,6 +1,7 @@
 import {
   createBooking,
   getCheckin,
+  // payBooking,
   updateBooking,
   updateCiCo,
 } from "./../controllers/booking.controller";
@@ -16,5 +17,6 @@ router.get("/:id", authentication, getBookingById);
 router.post("/", authentication, createBooking);
 router.put("/:id", authentication, updateBooking);
 router.put("/checkin/:id", authentication, updateCiCo);
+// router.post("/checkin/payment", payBooking);
 
 export default router;

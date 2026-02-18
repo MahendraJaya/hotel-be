@@ -6,6 +6,7 @@ import roomTypeRoute from "./routes/roomType.route";
 import roomRoute from "./routes/room.route";
 import guestRoute from "./routes/guest.route";
 import bookingRoute from "./routes/booking.route";
+import paymentRoute from "./routes/payment.route";
 import { authentication } from "./middleware/authentication.middleware";
 
 const app = express();
@@ -23,6 +24,7 @@ app.use("/api/roomtype", roomTypeRoute); //done
 app.use("/api/room", roomRoute); //done
 app.use("/api/guest", guestRoute); //done
 app.use("/api/booking", bookingRoute); 
+app.use("/api/payment", paymentRoute); 
 app.get("/api/mid", authentication, (req, res) => {
   res.send("Hello World!");
 });

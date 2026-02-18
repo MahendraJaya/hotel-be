@@ -60,6 +60,7 @@ model Booking {
   bookingDate DateTime
   status String?
   totalGuest Int @default(1)
+  totalDay Int @default(1)
   roomId Int
   
   room Room @relation(fields: [roomId], references: [id])
@@ -70,10 +71,12 @@ model Booking {
 model Payment {
   id String @id
   bookingId String @unique
-  total Float
-  paymentDate DateTime
-  paymentMethod String
-  status String
+  total Float?
+  paymentDate DateTime?
+  paymentMethod String?
+  status String?
+  paymentToken String?
+  paymentUrl String?
 
   booking Booking @relation(fields: [bookingId], references: [id])
 }

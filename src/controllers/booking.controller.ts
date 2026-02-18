@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import z from "zod";
 import { prisma } from "../lib/prisma";
+import Midtrans from "midtrans-client";
 
 const creatBookingSchema = z.object({
   id: z.string(),
@@ -10,6 +11,7 @@ const creatBookingSchema = z.object({
   checkOutDate: z.string(),
   bookingDate: z.string(),
   totalGuest: z.coerce.number().int(),
+  totalDay: z.coerce.number().int(),
   status: z.string().optional(),
 });
 export const createBooking = async (
@@ -35,6 +37,7 @@ export const createBooking = async (
       checkOutDate,
       bookingDate,
       totalGuest,
+      totalDay,
       status,
     } = parseBody.data;
     const booking = await prisma.booking.create({
@@ -46,6 +49,7 @@ export const createBooking = async (
         checkOutDate: new Date(checkOutDate),
         bookingDate: new Date(bookingDate),
         totalGuest: totalGuest,
+        totalDay: totalDay,
         status: status,
       },
     });
@@ -208,6 +212,45 @@ export const updateBooking = async (
   }
 };
 
+// export const payBooking = async (req: Request, res: Response) => {
+//   try {
+//     const midtrans = Midtrans;
+//     const SERVER_KEY = process.env.MIDTRANS_SERVER_KEY;
+//     const CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY;
+
+//     let snap = new midtrans.Snap({
+//       isProduction: false,
+//       clientKey: CLIENT_KEY || "",
+//       serverKey: SERVER_KEY || "",
+//     });
+
+//     let parameter = {
+//       transaction_details: {
+//         order_id: "YOUR-ORDERID-123452",
+//         gross_amount: 10000,
+//       },
+//       credit_card: {
+//         secure: true,
+//       },
+//       customer_details: {
+//         first_name: "budi",
+//         last_name: "pratama",
+//         email: "budi.pra@example.com",
+//         phone: "08111222333",
+//       },
+//     };
+
+//     snap.createTransaction(parameter).then((transaction) => {
+//       // transaction token
+//       let transactionToken = transaction.token;
+//       console.log("transactionToken:", transaction);
+//       res.status(200).json(transactionToken);
+//     });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+
 //untuk updaet checkin dan checkout
 export const updateCiCo = async (
   req: Request,
@@ -215,9 +258,10 @@ export const updateCiCo = async (
 ): Promise<void> => {
   try {
     const { id } = req.params;
-    const parseBody = z.object({
-      status: z.string(),
-    })
+    const parseBody = z
+      .object({
+        status: z.string(),
+      })
       .safeParse(req.body);
     if (!parseBody.success) {
       res.status(400).json({

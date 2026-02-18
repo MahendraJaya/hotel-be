@@ -12,6 +12,24 @@ const createGuestSchema = z.object({
   // userId: z.coerce.number().int(),
 });
 
+export const getAllGuest = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const guest = await prisma.guest.findMany({});
+    res.status(200).json({
+      success: true,
+      message: "Guest fetched successfully",
+      data: guest,
+    });
+  } catch (error) {
+    console.log("Error while getting guest : ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting guest",
+      data: null,
+    });
+  }
+}
+
 export const createGuest = async (
   req: Request,
   res: Response,
@@ -73,7 +91,7 @@ export const getGuest = async (req: Request, res: Response): Promise<void> => {
     }
     const { page, limit, search } = req.query;
     const pageNumber = Number(page) || 1;
-    const pageLimit = Number(limit) || 10;
+    const pageLimit = Number(limit) || 5;
     const skip = (pageNumber - 1) * pageLimit;
 
     const where: Prisma.GuestWhereInput = {};
