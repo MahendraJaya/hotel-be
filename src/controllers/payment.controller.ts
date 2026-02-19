@@ -104,87 +104,6 @@ const confirmPaymentSchema = z.object({
   status: z.string(),
 });
 
-export const confirmPayment = async (
-  req: Request,
-  res: Response,
-): Promise<void> => {
-  try {
-    const parseBody = confirmPaymentSchema.safeParse(req.body);
-    if (!parseBody.success) {
-      res.status(400).json({
-        success: false,
-        message: "Invalid request body",
-        data: null,
-      });
-      return;
-    }
-    const { status } = req.body;
-    const { id } = req.params;
-    const selPayment = await prisma.payment.findUnique({
-      where: {
-        id: id.toString(),
-      },
-    });
-
-    if (!selPayment) {
-      res.status(404).json({
-        success: false,
-        message: "Payment not found",
-        data: null,
-      });
-      return;
-    }
-
-    if (status == "Complete" && selPayment.status != "Complete") {
-      const updatedPayment = await prisma.payment.update({
-        where: {
-          id: id.toString(),
-        },
-        data: {
-          status: status,
-        },
-      });
-      await prisma.booking.update({
-        where: {
-          id: selPayment.bookingId,
-        },
-        data: {
-          status: "Waiting",
-        },
-      });
-      res.status(200).json({
-        success: true,
-        message: "Payment updated successfully",
-        data: updatedPayment,
-      });
-      return;
-    } else if (status == "Cancel" && selPayment.status != "Cancel") {
-      const updatedPayment = await prisma.payment.update({
-        where: {
-          id: id.toString(),
-        },
-        data: {
-          status: status,
-        },
-      });
-      await prisma.booking.update({
-        where: {
-          id: selPayment.bookingId,
-        },
-        data: {
-          status: "Cancel",
-        },
-      });
-      res.status(200).json({
-        success: true,
-        message: "Payment updated successfully",
-        data: updatedPayment,
-      });
-      return;
-    }
-  } catch (error) {}
-};
-
 const payBookingScheme = z.object({
   bookingId: z.string(),
 });
@@ -223,6 +142,12 @@ export const payBooking = async (req: Request, res: Response) => {
       return;
     }
 
+    const findPayment = await prisma.payment.findFirst({
+      where: {
+        bookingId: bookingId,
+      },
+    });
+
     let snap = new midtrans.Snap({
       isProduction: false,
       clientKey: CLIENT_KEY || "",
@@ -250,7 +175,6 @@ export const payBooking = async (req: Request, res: Response) => {
     snap.createTransaction(parameter).then(async (transaction) => {
       // transaction token
       let transactionToken = transaction.token;
-      // console.log("transactionToken:", transaction);
       const payment = await prisma.payment.create({
         data: {
           id: transactionToken,
@@ -276,6 +200,110 @@ export const payBooking = async (req: Request, res: Response) => {
       success: false,
       message: "Internal server error",
       data: null,
+    });
+  }
+};
+
+export const checkMidtransPayment = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const serverKey = process.env.MIDTRANS_SERVER_KEY!;
+    const encodedKey = Buffer.from(`${serverKey}:`).toString("base64");
+    const midtrans = Midtrans;
+    const CLIENT_KEY = process.env.MIDTRANS_CLIENT_KEY;
+
+    const response = await fetch(
+      `https://api.sandbox.midtrans.com/v2/${id}/status`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${encodedKey}`,
+        },
+      },
+    );
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        message: "Failed to fetch Midtrans status",
+      });
+    }
+
+    const findPayment = await prisma.payment.findFirst({
+      where: {
+        bookingId: id.toString(),
+      },
+      include: {
+        booking: {
+          include: {
+            guest: true,
+          },
+        },
+      },
+    });
+    if (!findPayment) {
+      return res.status(404).json({
+        message: "Payment not found -> ",
+        id,
+      });
+    }
+
+    const data = await response.json();
+    if (data.status_code == 407) {
+      let snap = new midtrans.Snap({
+        isProduction: false,
+        clientKey: CLIENT_KEY || "",
+        serverKey: serverKey || "",
+      });
+
+      let parameter = {
+        transaction_details: {
+          order_id: findPayment.bookingId,
+          gross_amount: findPayment.total || 1,
+        },
+
+        credit_card: {
+          secure: true,
+        },
+        customer_details: {
+          first_name: findPayment.booking.guest.name,
+          email: findPayment.booking.guest.email,
+          guest_id: findPayment.booking.guest.id,
+        },
+      };
+
+      snap.createTransaction(parameter).then(async (transaction) => {
+        // transaction token
+        let transactionToken = transaction.token;
+        const payment = await prisma.payment.update({
+          where: {
+            bookingId: id.toString(),
+          },
+          data: {
+            paymentToken: transactionToken,
+            paymentUrl: transaction.redirect_url,
+          },
+        });
+
+        res.status(200).json({
+          success: true,
+          message: "Updated Midtrans Token",
+          data: payment,
+        });
+      });
+      return;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Midtrans Token not expired yet",
+      data: findPayment,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
     });
   }
 };

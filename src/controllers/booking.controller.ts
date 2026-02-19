@@ -136,6 +136,7 @@ export const getCheckin = async (req: Request, res: Response) => {
       include: {
         guest: true,
         room: true,
+        payment: true,
       },
     });
 

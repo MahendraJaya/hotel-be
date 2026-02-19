@@ -12,7 +12,7 @@ import { authentication } from "../middleware/authentication.middleware";
 const router = Router();
 
 router.get("/", authentication, getBooking);
-router.get("/checkin", authentication, getCheckin);
+router.get("/checkin", getCheckin);
 router.get("/:id", authentication, getBookingById);
 router.post("/", authentication, createBooking);
 router.put("/:id", authentication, updateBooking);
