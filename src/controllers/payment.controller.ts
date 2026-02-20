@@ -307,3 +307,63 @@ export const checkMidtransPayment = async (req: Request, res: Response) => {
     });
   }
 };
+
+const successMidtransPaymentSchema = z.object({
+  transaction_status: z.string(),
+  order_id: z.string(),
+});
+export const successMidtransPayment = async (req: Request, res: Response) => {
+  console.log(req.body);
+  try {
+    const parseBody = successMidtransPaymentSchema.safeParse(req.body);
+    if (!parseBody.success) {
+      res.status(400).json({
+        success: false,
+        message: "Invalid request body",
+        data: null,
+      });
+      return;
+    }
+    const { transaction_status, order_id } = parseBody.data;
+
+    const findPayment = await prisma.payment.findFirst({
+      where: {
+        bookingId: order_id,
+      },
+    })
+    if (!findPayment) {
+      return res.status(404).json({
+        message: "Payment not found -> ",
+        order_id,
+      });
+    }
+    
+    if(transaction_status == "settlement" || transaction_status == "capture"){
+      const updatePayment = await prisma.payment.update({
+        where: {
+          bookingId: order_id,
+        },
+        data: {
+          status: "success",
+        },
+      })
+      res.status(200).json({
+        success: true,
+        message: "Payment updated successfully",
+        data: updatePayment,
+      })
+      return;
+    }
+
+    res.status(401).json({
+      success: false,
+      message: "Something went wrong went processing your payment",
+      data: null,
+    })
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      message: "Internal Server Error",
+    });
+  }
+};

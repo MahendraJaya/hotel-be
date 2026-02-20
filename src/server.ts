@@ -25,7 +25,7 @@ app.use("/api/room", roomRoute); //done
 app.use("/api/guest", guestRoute); //done
 app.use("/api/booking", bookingRoute); 
 app.use("/api/payment", paymentRoute); 
-app.get("/api/mid", authentication, (req, res) => {
+app.get("/api/mid", (req, res) => {
   res.send("Hello World!");
 });
 
