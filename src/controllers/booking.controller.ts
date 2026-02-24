@@ -155,6 +155,34 @@ export const getCheckin = async (req: Request, res: Response) => {
   }
 };
 
+export const getCheckout = async (req: Request, res: Response) => {
+  try {
+    const checkin = await prisma.booking.findMany({
+      where: {
+        status: "checkin",
+      },
+      include: {
+        guest: true,
+        room: true,
+        payment: true,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Checkin fetched successfully",
+      data: checkin,
+    });
+  } catch (error) {
+    console.log("Error while getting checkin ~ getCheckin: ", error);
+    res.status(500).json({
+      success: false,
+      message: "Error while getting checkin",
+      data: null,
+    });
+  }
+};
+
 export const updateBooking = async (
   req: Request,
   res: Response,

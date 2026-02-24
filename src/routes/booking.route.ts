@@ -1,7 +1,7 @@
 import {
   createBooking,
   getCheckin,
-  // payBooking,
+  getCheckout,
   updateBooking,
   updateCiCo,
 } from "./../controllers/booking.controller";
@@ -13,10 +13,10 @@ const router = Router();
 
 router.get("/", authentication, getBooking);
 router.get("/checkin", getCheckin);
+router.get("/checkout", getCheckout);
 router.get("/:id", authentication, getBookingById);
 router.post("/", authentication, createBooking);
 router.put("/:id", authentication, updateBooking);
 router.put("/checkin/:id", authentication, updateCiCo);
-// router.post("/checkin/payment", payBooking);
 
 export default router;
